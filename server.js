@@ -19,7 +19,9 @@ connectDB()
 
 
 
-
+app.get('/',async(req,res)=>{
+    res.send({message:"Get first route"})
+})
 
 
 
