@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
     // Account Status
     isActive: { type: Boolean, default: true },
     profileComplete: { type: Boolean, default: false },
-    
+ 
     expoPushToken: {
         type: String,
         default: null

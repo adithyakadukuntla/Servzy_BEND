@@ -8,14 +8,16 @@ Content-Type: application/json
 
 
 
+###
+GET http://192.168.155.127:5000/auth/
 
 ###
-POST https://servzy-bend.onrender.com/auth/register
+POST http://localhost:5000/auth/register
 Content-Type: application/json
 
 {
-    "email":"adithyakadukuntla@gmail.com",
-    "password":"Adithya@237"
+    "email":"adithyakadukuntla008@gmail.com",
+    "password":"Adithya@2307"
 }
 
 
