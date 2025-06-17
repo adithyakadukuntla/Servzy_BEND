@@ -10,6 +10,16 @@ Content-Type: application/json
 
 
 ###
+POST https://servzy-bend.onrender.com/auth/register
+Content-Type: application/json
+
+{
+    "email":"adithyakadukuntla@gmail.com",
+    "password":"Adithya@237"
+}
+
+
+###
 GET https://servzy-bend.onrender.com/book/stats/684e934f85ba02d8b34baee1
 
 

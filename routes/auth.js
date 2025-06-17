@@ -5,6 +5,9 @@ require('dotenv').config();
 const User = require('../models/User');
 
 const router = express.Router();
+router.get('/',async(req,res)=>{
+    res.send({message:"auth first route "})
+})
 
 // Register Route
 router.post('/register', async (req, res) => {
