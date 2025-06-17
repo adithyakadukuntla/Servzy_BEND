@@ -10,7 +10,7 @@ Content-Type: application/json
 
 
 ###
-GET http://192.168.155.127:5000/book/stats/684e934f85ba02d8b34baee1
+GET https://servzy-bend.onrender.com/book/stats/684e934f85ba02d8b34baee1
 
 
 ###
