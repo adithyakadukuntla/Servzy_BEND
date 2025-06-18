@@ -86,7 +86,7 @@ bookRouter.post('/new-booking', async (req, res) => {
     }
         
     } catch (error) {
-        console.error("Error creating booking:", error);
+        
         res.send({
             success: false,
             message: "Error creating booking",

@@ -21,7 +21,7 @@ Content-Type: application/json
 }
 
 ###
-GET https://servzy-bend.onrender.com/book/bookings/685101162fc9fec0c613aaa4
+GET https://servzy-bend.onrender.com/book/
 ###
 POST https://servzy-bend.onrender.com/book/new-booking
 Content-Type: application/json
@@ -45,8 +45,8 @@ Content-Type: application/json
                 "email": "adithyakadukuntla008@gmail.com",
                 "phone": "7093592456",
                 "serviceSelected":"Wedding & Portrait" ,
-                "rating": 0,
-                "totalShoots": 0
+                "rating": 1,
+                "totalShoots": 0,
             }],
     "money": ,
     "bookDate": "2025-06-20T07:05:00.000+00:00",
