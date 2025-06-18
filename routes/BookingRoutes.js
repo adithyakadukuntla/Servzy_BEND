@@ -60,12 +60,27 @@ bookRouter.post('/new-booking', async (req, res) => {
         // console.log("new ",newBooking)
         // Save to db
         const savedBooking = await newBooking.save();
-        
+        console.log("savres",savedBooking)
+        if(savedBooking){
         res.status(201).json({
             success: true,
             message: "Booking created successfully",
             booking: savedBooking
         });
+        console.log('pId',serviceProvider._id);
+         console.log('pId',serviceProvider.expoPushToken);
+
+        if (serviceProvider.expoPushToken) {
+            await axios.post('https://exp.host/--/api/v2/push/send', {
+                to: serviceProvider.expoPushToken,
+                title: "New Booking Created",
+                body: `You got a new Booking from ${clientDetails.name}`
+            });
+            } else {
+            console.log("No Expo push token found ");
+            }
+
+    }
         
     } catch (error) {
         console.error("Error creating booking:", error);
@@ -192,7 +207,7 @@ bookRouter.put('/update-booking/:bookingId', async (req, res) => {
                     { new: true }
                 );
 
-                console.log(`Total shoots incremented for service provider: ${serviceProviderId}`);
+                // console.log(`Total shoots incremented for service provider: ${serviceProviderId}`);
             }
         } else {
             // When rejecting a booking
@@ -218,7 +233,7 @@ bookRouter.put('/update-booking/:bookingId', async (req, res) => {
             });
         }
 
-        console.log(`Booking ${bookingId} ${accepted ? 'accepted' : 'rejected'}`);
+        // console.log(`Booking ${bookingId} ${accepted ? 'accepted' : 'rejected'}`);
 
         res.status(200).json({
             success: true,
@@ -235,10 +250,10 @@ bookRouter.put('/update-booking/:bookingId', async (req, res) => {
             if (user?.expoPushToken) {
             await axios.post('https://exp.host/--/api/v2/push/send', {
                 to: user.expoPushToken,
-                title: accepted ? 'Booking Accepted!' : 'Booking Rejected',
+                title: accepted ? `${updatedBooking.serviceProvider[0].businessName} Booking Accepted` : `${updatedBooking.serviceProvider[0].businessName} Booking Rejected`,
                 body: accepted 
-                ? 'Your booking has been accepted by the provider.' 
-                : 'Your booking has been rejected by the provider.'
+                ? `Your booking has been accepted by the ${updatedBooking.serviceProvider[0].name}.` 
+                : `Your booking has been rejected by the ${updatedBooking.serviceProvider[0].name}.` 
             });
             } else {
             console.log(`No Expo push token found for user ${clientId}`);
@@ -259,7 +274,7 @@ bookRouter.put('/update-booking/:bookingId', async (req, res) => {
 bookRouter.put('/update-bookingcomplete/:bookingId', async (req, res) => {
     const bookingId = req.params.bookingId;
     const { completed, status } = req.body;
-    console.log("Request body:", req.body);
+    // console.log("Request body:", req.body);
 
     try {
         // Validate completed value

@@ -22,7 +22,7 @@ Content-Type: application/json
 
 
 ###
-GET https://servzy-bend.onrender.com/book/stats/684e934f85ba02d8b34baee1
+GET https://servzy-bend.onrender.com/
 
 
 ###
@@ -31,4 +31,16 @@ Content-Type: application/json
 
 {
     "newRating":4
+}
+
+
+
+###
+post https://exp.host/--/api/v2/push/send 
+Content-Type: application/json
+
+{
+                "to": "ExponentPushToken[lWLdLwEOB305_5huCQsxxA]",
+                "title": "Booking Accepted!",
+                "body": "Your booking has been accepted by the provider." 
 }

@@ -85,17 +85,18 @@ userRouter.post('/userrating/:id', async (req, res) => {
 // In UserRoutes.js (or similar)
 userRouter.post('/save-push-token', async (req, res) => {
   const { userId, expoPushToken } = req.body;
+//   console.log("rbexpotoken",req.body)
   if (!userId || !expoPushToken) {
-    return res.status(400).json({ success: false, message: 'Missing userId or token' });
+    return res.send({ success: false, message: 'Missing userId or token' });
   }
 
   try {
     // Update user record with token (adjust based on your DB model)
     await User.findByIdAndUpdate(userId, { expoPushToken });
-    res.json({ success: true, message: 'Push token saved' });
+    res.send({ success: true, message: 'Push token saved' });
   } catch (err) {
     console.error('Error saving push token:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.send({ success: false, message: 'Server error' });
   }
 });
 

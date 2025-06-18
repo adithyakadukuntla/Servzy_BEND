@@ -524,4 +524,22 @@ photoRouter.post('/portfolio/:id/add', async (req, res) => {
 });
 
 
+photoRouter.post('/save-push-token', async (req, res) => {
+  const { pId, expoPushToken } = req.body;
+   console.log("rbexpotoken",req.body)
+  if (!pId || !expoPushToken) {
+    return res.send({ success: false, message: 'Missing userId or token' });
+  }
+
+  try {
+    // Update user record with token (adjust based on your DB model)
+    await Photographer.findByIdAndUpdate(pId, { expoPushToken });
+    res.send({ success: true, message: 'Push token saved' });
+  } catch (err) {
+    console.error('Error saving push token:', err);
+    res.send({ success: false, message: 'Server error' });
+  }
+});
+
+
 module.exports = photoRouter;

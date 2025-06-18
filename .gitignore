@@ -2,5 +2,6 @@
 .env
 
 node_modules
+index.js
 
-serviceAccountKey.json
+package-lock.json
