@@ -4,6 +4,9 @@ const Photographer = require('../models/Photographer')
 const bookRouter = express.Router();
 const User = require('../models/User')
 const axios = require('axios');
+bookRouter.get('/',async(req,res)=>{
+    res.send({message:"book route"})
+})
 
 bookRouter.post('/new-booking', async (req, res) => {
     try {
@@ -84,7 +87,7 @@ bookRouter.post('/new-booking', async (req, res) => {
         
     } catch (error) {
         console.error("Error creating booking:", error);
-        res.status(500).json({
+        res.send({
             success: false,
             message: "Error creating booking",
             error: error.message

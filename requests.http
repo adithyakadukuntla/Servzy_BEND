@@ -12,7 +12,7 @@ Content-Type: application/json
 GET http://192.168.155.127:5000/auth/
 
 ###
-POST http://localhost:5000/auth/register
+POST https://servzy-bend.onrender.com/pshoot/login
 Content-Type: application/json
 
 {
@@ -20,9 +20,39 @@ Content-Type: application/json
     "password":"Adithya@2307"
 }
 
-
 ###
-GET https://servzy-bend.onrender.com/
+GET https://servzy-bend.onrender.com/book/bookings/685101162fc9fec0c613aaa4
+###
+POST https://servzy-bend.onrender.com/book/new-booking
+Content-Type: application/json
+
+{
+    "client":[
+        {
+            "clientId":"685101162fc9fec0c613aaa4",
+            "name":"Adithya Kadukuntla ",
+            "email":"adithyakadukuntla@gmail.com",
+            "phone":"7093592456",
+            "gender":"Male",
+            "address":"Q8Q4+F46, Nizamabad - Mancherial - Jagdalpur Road, Kotarmoor"
+        }
+    ],
+    "serviceType":"Photography Services",
+    "serviceProvider": [{
+                "serviceProviderId": "685267f0376529561aa7a9db",
+                "businessName":"Adithya photoshop",
+                "name": "Adithya k",
+                "email": "adithyakadukuntla008@gmail.com",
+                "phone": "7093592456",
+                "serviceSelected":"Wedding & Portrait" ,
+                "rating": 0,
+                "totalShoots": 0
+            }],
+    "money": ,
+    "bookDate": "2025-06-20T07:05:00.000+00:00",
+    "bookTime": "2025-06-18T07:05:19.836+00:00",
+    "bookDateTime": "2025-06-20T07:05:00.000+00:00",
+}
 
 
 ###
