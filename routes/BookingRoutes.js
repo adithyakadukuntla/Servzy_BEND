@@ -3,84 +3,160 @@ const Booking = require('../models/PhotoSBookings');
 const Photographer = require('../models/Photographer');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+
 const bookRouter = express.Router();
 const axios = require('axios');
+require('dotenv').config();
 const { GoogleAuth } = require('google-auth-library');
 
-const auth = new GoogleAuth({
-  keyFile: './servzy-87f88-firebase-adminsdk-fbsvc-b45300962a.json',
-  scopes: ['https://www.googleapis.com/auth/firebase.messaging']
-});
-const scAuth = new GoogleAuth({
-  keyFile: './servzycaptain-firebase-adminsdk-fbsvc-5f2f4d2ace.json',
-  scopes: ['https://www.googleapis.com/auth/firebase.messaging']
-});
+// const auth = new GoogleAuth({
+//   keyFile: './servzy-87f88-firebase-adminsdk-fbsvc-b45300962a.json',
+//   scopes: ['https://www.googleapis.com/auth/firebase.messaging']
+// });
+// const scAuth = new GoogleAuth({
+//   keyFile: './servzycaptain-firebase-adminsdk-fbsvc-5f2f4d2ace.json',
+//   scopes: ['https://www.googleapis.com/auth/firebase.messaging']
+// });
     
-// Helper function to send FCM notification
-// this function is for servzy captain one for sending notifications to Client or customers
+// // Helper function to send FCM notification
+// // this function is for servzy captain one for sending notifications to Client or customers
+// async function sendServzyCaptainFCMNotification(fcmToken, title, body, data = {}) {
+//   try {
+//     const client = await auth.getClient();
+//     const accessToken = await client.getAccessToken();
+//      console.log("tkn of servzy/ customers",fcmToken)
+//     const message = {
+//       message: {
+//         token: fcmToken,
+//         notification: {
+//           title: title,
+//           body: body
+//         },
+//         data: data 
+//       }
+//     };
+
+//     const projectId = 'servzy-87f88';
+//     const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+//     await axios.post(url, message, {
+//       headers: {
+//         Authorization: `Bearer ${accessToken.token}`,
+//         'Content-Type': 'application/json'
+//       }
+//     });
+
+//     // console.log('FCM Notification sent successfully');
+
+
+//   } catch (error) {
+//     console.error('Error sending FCM notification:', error);
+//   }
+// }
+// // this one is for servzy to use sproviders token to send notifications to them about new bookings or cancelling of bookings 
+// async function sendServzyFCMNotification(fcmToken, title, body, data = {}) {
+//   try {
+//     const client = await scAuth.getClient();
+//     const accessToken = await client.getAccessToken();
+//         console.log("tkn",fcmToken)
+//     const message = {
+//       message: {
+//         token: fcmToken,
+//         notification: {
+//           title: title,
+//           body: body
+//         },
+//         data: data
+//       }
+//     };
+
+//     const projectId = 'servzycaptain';
+//     const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+//     await axios.post(url, message, {
+//       headers: {
+//         Authorization: `Bearer ${accessToken.token}`,
+//         'Content-Type': 'application/json'
+//       }
+//     });
+
+//     // console.log('FCM Notification sent successfully');
+//   } catch (error) {
+//     console.error('Error sending FCM notification:', error);
+//   }
+// }
+function createServiceAccountFromEnv(prefix) {
+  return {
+    type: process.env[`${prefix}_TYPE`],
+    project_id: process.env[`${prefix}_PROJECT_ID`],
+    private_key_id: process.env[`${prefix}_PRIVATE_KEY_ID`],
+    private_key: process.env[`${prefix}_PRIVATE_KEY`].replace(/\\n/g, '\n'),
+    client_email: process.env[`${prefix}_CLIENT_EMAIL`],
+  };
+}
+
+// Create GoogleAuth instances from environment variables
+const auth = new GoogleAuth({
+  credentials: createServiceAccountFromEnv('SERVZY'),
+  scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+});
+
+const scAuth = new GoogleAuth({
+  credentials: createServiceAccountFromEnv('SERVZYCAP'),
+  scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+});
+
+// Helper: Send notification to customers (Servzy)
 async function sendServzyCaptainFCMNotification(fcmToken, title, body, data = {}) {
   try {
     const client = await auth.getClient();
     const accessToken = await client.getAccessToken();
-     console.log("tkn of servzy/ customers",fcmToken)
+
     const message = {
       message: {
         token: fcmToken,
-        notification: {
-          title: title,
-          body: body
-        },
-        data: data 
-      }
+        notification: { title, body },
+        data,
+      },
     };
 
-    const projectId = 'servzy-87f88';
-    const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+    const url = `https://fcm.googleapis.com/v1/projects/${process.env.SERVZY_PROJECT_ID}/messages:send`;
 
     await axios.post(url, message, {
       headers: {
         Authorization: `Bearer ${accessToken.token}`,
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
-
-    // console.log('FCM Notification sent successfully');
-
-
   } catch (error) {
-    console.error('Error sending FCM notification:', error);
+    console.error('Error sending Servzy notification:', error.response?.data || error.message);
   }
 }
-// this one is for servzy to use sproviders token to send notifications to them about new bookings or cancelling of bookings 
+
+// Helper: Send notification to service providers (ServzyCaptain)
 async function sendServzyFCMNotification(fcmToken, title, body, data = {}) {
   try {
     const client = await scAuth.getClient();
     const accessToken = await client.getAccessToken();
-        console.log("tkn",fcmToken)
+
     const message = {
       message: {
         token: fcmToken,
-        notification: {
-          title: title,
-          body: body
-        },
-        data: data
-      }
+        notification: { title, body },
+        data,
+      },
     };
 
-    const projectId = 'servzycaptain';
-    const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+    const url = `https://fcm.googleapis.com/v1/projects/${process.env.SERVZYCAP_PROJECT_ID}/messages:send`;
 
     await axios.post(url, message, {
       headers: {
         Authorization: `Bearer ${accessToken.token}`,
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
-
-    // console.log('FCM Notification sent successfully');
   } catch (error) {
-    console.error('Error sending FCM notification:', error);
+    console.error('Error sending ServzyCaptain notification:', error.response?.data || error.message);
   }
 }
 
