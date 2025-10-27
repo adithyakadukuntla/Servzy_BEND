@@ -88,7 +88,7 @@ const photographerSchema = new mongoose.Schema({
     pincode:{
         type:String,
     },
-    expoPushToken:{type:String},
+    fcmToken:{type:String,default:null},
     
     // Pricing
     priceRange: {

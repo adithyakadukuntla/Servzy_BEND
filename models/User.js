@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema({
     isActive: { type: Boolean, default: true },
     profileComplete: { type: Boolean, default: false },
  
-    expoPushToken: {
+    fcmToken: {
         type: String,
         default: null
   }

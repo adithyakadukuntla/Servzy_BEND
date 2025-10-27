@@ -7,9 +7,16 @@ Content-Type: application/json
 }
 
 
+####
 
+GET http://192.168.155.127:5000/pshoot/allpshooters/503224
 ###
-GET http://192.168.155.127:5000/auth/
+GET http://192.168.31.227:5000/pshoot/search
+Content-Type: application/json
+
+{
+    "searchQuery":"Srinivas"
+}
 
 ###
 POST https://servzy-bend.onrender.com/pshoot/login
@@ -70,7 +77,27 @@ post https://exp.host/--/api/v2/push/send
 Content-Type: application/json
 
 {
-                "to": "ExponentPushToken[lWLdLwEOB305_5huCQsxxA]",
+                "to": "ExponentPushToken[MixtStKzv5iKqVNQ5UZLwH]",
+                "title": "Booking Accepted!",
+                "body": "Your booking has been accepted by the provider." 
+}
+{
+   "message":{
+      "token":"bk3RNwTe3H0:CI2k_HHwgIpoDKCIZvvDMExUdFQ3P1...",
+      "notification":{
+        "body":"This is an FCM notification message!",
+        "title":"FCM Message"
+      }
+   }
+}
+
+###
+POST https://fcm.googleapis.com/v1/projects/bike-fc486/messages:send
+Content-Type: application/json
+Authorization: Bearer "BHE5DgwgL5w-kyx6EBTVrTyFps3KIxop9ZaTsokWL_lgZUEgkhGHVYszYWuZ-N7dSRHJyOYBxXj2FSJoRUdxvzc"
+
+{
+                "to": "ExponentPushToken[MixtStKzv5iKqVNQ5UZLwH]",
                 "title": "Booking Accepted!",
                 "body": "Your booking has been accepted by the provider." 
 }

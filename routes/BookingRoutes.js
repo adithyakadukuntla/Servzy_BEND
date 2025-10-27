@@ -1,17 +1,96 @@
 const express = require('express');
 const Booking = require('../models/PhotoSBookings');
-const Photographer = require('../models/Photographer')
+const Photographer = require('../models/Photographer');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 const bookRouter = express.Router();
-const User = require('../models/User')
 const axios = require('axios');
+const { GoogleAuth } = require('google-auth-library');
+
+const auth = new GoogleAuth({
+  keyFile: './servzy-87f88-firebase-adminsdk-fbsvc-b45300962a.json',
+  scopes: ['https://www.googleapis.com/auth/firebase.messaging']
+});
+const scAuth = new GoogleAuth({
+  keyFile: './servzycaptain-firebase-adminsdk-fbsvc-5f2f4d2ace.json',
+  scopes: ['https://www.googleapis.com/auth/firebase.messaging']
+});
+    
+// Helper function to send FCM notification
+// this function is for servzy captain one for sending notifications to Client or customers
+async function sendServzyCaptainFCMNotification(fcmToken, title, body, data = {}) {
+  try {
+    const client = await auth.getClient();
+    const accessToken = await client.getAccessToken();
+     console.log("tkn of servzy/ customers",fcmToken)
+    const message = {
+      message: {
+        token: fcmToken,
+        notification: {
+          title: title,
+          body: body
+        },
+        data: data 
+      }
+    };
+
+    const projectId = 'servzy-87f88';
+    const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+    await axios.post(url, message, {
+      headers: {
+        Authorization: `Bearer ${accessToken.token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // console.log('FCM Notification sent successfully');
+
+
+  } catch (error) {
+    console.error('Error sending FCM notification:', error);
+  }
+}
+// this one is for servzy to use sproviders token to send notifications to them about new bookings or cancelling of bookings 
+async function sendServzyFCMNotification(fcmToken, title, body, data = {}) {
+  try {
+    const client = await scAuth.getClient();
+    const accessToken = await client.getAccessToken();
+        console.log("tkn",fcmToken)
+    const message = {
+      message: {
+        token: fcmToken,
+        notification: {
+          title: title,
+          body: body
+        },
+        data: data
+      }
+    };
+
+    const projectId = 'servzycaptain';
+    const url = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+
+    await axios.post(url, message, {
+      headers: {
+        Authorization: `Bearer ${accessToken.token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // console.log('FCM Notification sent successfully');
+  } catch (error) {
+    console.error('Error sending FCM notification:', error);
+  }
+}
+
+
 bookRouter.get('/',async(req,res)=>{
     res.send({message:"book route"})
 })
 
 bookRouter.post('/new-booking', async (req, res) => {
     try {
-        // console.log("Request body:", req.body);
-        
         const { 
             clientDetails, 
             serviceType, 
@@ -47,7 +126,7 @@ bookRouter.post('/new-booking', async (req, res) => {
             serviceType: serviceType,
             serviceProvider: [{
                 serviceProviderId: serviceProvider._id,
-                businessName:serviceProvider.businessName,
+                businessName: serviceProvider.businessName,
                 name: serviceProvider.name,
                 email: serviceProvider.email,
                 phone: serviceProvider.phone,
@@ -60,33 +139,34 @@ bookRouter.post('/new-booking', async (req, res) => {
             bookTime: new Date(bookTime),
             bookDateTime: selectedDateTime,
         });
-        // console.log("new ",newBooking)
-        // Save to db
+
         const savedBooking = await newBooking.save();
-        console.log("savres",savedBooking)
-        if(savedBooking){
-        res.status(201).json({
-            success: true,
-            message: "Booking created successfully",
-            booking: savedBooking
-        });
-        console.log('pId',serviceProvider._id);
-         console.log('pId',serviceProvider.expoPushToken);
-
-        if (serviceProvider.expoPushToken) {
-            await axios.post('https://exp.host/--/api/v2/push/send', {
-                to: serviceProvider.expoPushToken,
-                title: "New Booking Created",
-                body: `You got a new Booking from ${clientDetails.name}`
+        
+        if (savedBooking) {
+            res.status(201).json({
+                success: true,
+                message: "Booking created successfully",
+                booking: savedBooking
             });
-            } else {
-            console.log("No Expo push token found ");
-            }
 
-    }
+            // Send FCM notification to service provider
+            // console.log("spid fcm token",serviceProvider.fcmToken)
+            if (serviceProvider.fcmToken) {
+                const title = "New Booking Created";
+                const body = `You got a new booking from ${clientDetails.name}`;
+                const notificationData = {
+                    bookingId: savedBooking._id.toString(),
+                    type: 'new_booking',
+                    clientName: clientDetails.name
+                };
+
+                await sendServzyFCMNotification(serviceProvider.fcmToken, title, body, notificationData);
+            } else {
+                console.log("No FCM token found for service provider");
+            }
+        }
         
     } catch (error) {
-        
         res.send({
             success: false,
             message: "Error creating booking",
@@ -97,8 +177,10 @@ bookRouter.post('/new-booking', async (req, res) => {
 
 
 
+
 bookRouter.get('/bookings/:userId', async (req, res) => {
     const userId = req.params.userId;
+    console.log("uid",userId)
 
     try {
         // Find bookings where the client array contains the userId
@@ -171,7 +253,7 @@ bookRouter.get('/serv-bookings/:servicePID', async (req, res) => {
 bookRouter.put('/update-booking/:bookingId', async (req, res) => {
     const bookingId = req.params.bookingId;
     const { accepted, status } = req.body;
-    console.log("Request body:", req.body);
+    // console.log("Request body:", req.body);
 
     try {
         // Validate accepted value
@@ -209,8 +291,6 @@ bookRouter.put('/update-booking/:bookingId', async (req, res) => {
                     { $inc: { totalShoots: 1 } },
                     { new: true }
                 );
-
-                // console.log(`Total shoots incremented for service provider: ${serviceProviderId}`);
             }
         } else {
             // When rejecting a booking
@@ -236,32 +316,36 @@ bookRouter.put('/update-booking/:bookingId', async (req, res) => {
             });
         }
 
-        // console.log(`Booking ${bookingId} ${accepted ? 'accepted' : 'rejected'}`);
-
         res.status(200).json({
             success: true,
             message: `Booking ${accepted ? 'accepted' : 'rejected'} successfully`,
             booking: updatedBooking
         });
+
+        // Send FCM notification to client
+        const clientId = updatedBooking.client[0].clientId;
+        const user = await User.findById(clientId);
         
+        if (user?.fcmToken) {
+            const title = accepted 
+                ? `${updatedBooking.serviceProvider[0].businessName} Booking Accepted`
+                : `${updatedBooking.serviceProvider[0].businessName} Booking Rejected`;
+            
+            const body = accepted 
+                ? `Your booking has been accepted by ${updatedBooking.serviceProvider[0].name}.`
+                : `Your booking has been rejected by ${updatedBooking.serviceProvider[0].name}.`;
+            
+            const notificationData = {
+                bookingId: bookingId,
+                type: 'booking_update',
+                status: status,
+                serviceProvider: updatedBooking.serviceProvider[0].businessName
+            };
 
-           const clientId = updatedBooking.client[0].clientId;
-
-            // Fetch client (or user) to get the expoPushToken
-            const user = await User.findById(clientId);
-
-            if (user?.expoPushToken) {
-            await axios.post('https://exp.host/--/api/v2/push/send', {
-                to: user.expoPushToken,
-                title: accepted ? `${updatedBooking.serviceProvider[0].businessName} Booking Accepted` : `${updatedBooking.serviceProvider[0].businessName} Booking Rejected`,
-                body: accepted 
-                ? `Your booking has been accepted by the ${updatedBooking.serviceProvider[0].name}.` 
-                : `Your booking has been rejected by the ${updatedBooking.serviceProvider[0].name}.` 
-            });
-            } else {
-            console.log(`No Expo push token found for user ${clientId}`);
-            }
-
+            await sendServzyCaptainFCMNotification(user.fcmToken, title, body, notificationData);
+        } else {
+            console.log(`No FCM token found for user ${clientId}`);
+        }
 
     } catch (error) {
         console.error('Error updating booking:', error);
@@ -274,7 +358,7 @@ bookRouter.put('/update-booking/:bookingId', async (req, res) => {
 });
 
 // Update booking completed status
-bookRouter.put('/update-bookingcomplete/:bookingId', async (req, res) => {
+bookRouter.put('/update/:bookingId/complete', async (req, res) => {
     const bookingId = req.params.bookingId;
     const { completed, status } = req.body;
     // console.log("Request body:", req.body);
@@ -294,7 +378,7 @@ bookRouter.put('/update-bookingcomplete/:bookingId', async (req, res) => {
             { 
                 completed: completed,
                 $inc: { "serviceProvider.0.totalShoots": 1 },
-                status: status,
+                status: "completed",
                 
                 updatedAt: new Date()
             },
@@ -325,7 +409,7 @@ bookRouter.put('/update-bookingcomplete/:bookingId', async (req, res) => {
             message: 'Server error while updating booking',
             error: error.message
         });
-    }
+    } 
 });
 
 
@@ -402,7 +486,7 @@ bookRouter.get('/stats/:servicePID', async (req, res) => {
         ]);
 
         const result = stats[0] || {
-            totalBookings: 0,
+            totalBookings: 10,
             acceptedBookings: 0,
             rejectedBookings: 0,
             pendingBookings: 0,
@@ -439,6 +523,313 @@ bookRouter.get('/stats/:servicePID', async (req, res) => {
     }
 });
 
+// GET refund preview for a booking (optional)
+bookRouter.get('/refund/:bookingId', async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        const refundData = calculateRefund(booking);
+
+        return res.status(200).json({
+            success: true,
+            refund: refundData
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    }
+});
+
+
+bookRouter.delete('/cancel/:bookingId', async (req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { userId, cancellationReason } = req.body;
+
+        // Validate required fields
+        if (!bookingId || !userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Booking ID and User ID are required'
+            });
+        }
+
+        // Find the booking
+        const booking = await Booking.findById(bookingId);
+
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                message: 'Booking not found'
+            });
+        }
+
+        // Verify the booking belongs to the user
+        if (booking.client[0].clientId.toString() !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You are not authorized to cancel this booking'
+            });
+        }
+
+        // Check if booking is already cancelled
+        if (booking.cancelled) {
+            return res.status(400).json({
+                success: false,
+                message: 'Booking is already cancelled'
+            });
+        }
+
+        // Check if booking is already rejected
+        if (booking.accepted === false) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot cancel a rejected booking'
+            });
+        }
+
+        // Check cancellation policy (2 hours before booking time)
+        if (booking.bookDateTime) {
+            const bookingTime = new Date(booking.bookDateTime);
+            const currentTime = new Date();
+            const timeDifference = bookingTime.getTime() - currentTime.getTime();
+            const hoursDifference = timeDifference / (1000 * 3600);
+
+            if (hoursDifference <= 2 && hoursDifference > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot cancel booking less than 2 hours before scheduled time'
+                });
+            }
+
+            if (hoursDifference <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot cancel past bookings'
+                });
+            }
+        }
+
+        // Calculate refund amount
+        const refundData = calculateRefund(booking);
+
+        // Update booking status
+        const updatedBooking = await Booking.findByIdAndUpdate(
+            bookingId,
+            {
+                cancelled: true,
+                cancelledAt: new Date(),
+                cancelledBy: 'client',
+                cancellationReason: cancellationReason || 'No reason provided',
+                status: 'cancelled',
+                refundAmount: refundData.refundAmount,
+                refundPercentage: refundData.refundPercentage,
+                refundStatus: refundData.refundAmount > 0 ? 'pending' : 'none',
+                accepted:false,
+                completed:false
+            },
+            { new: true }
+        );
+
+        
+
+        // Send FCM notification to service provider
+        const photographer = await Photographer.findById(booking.serviceProvider[0].serviceProviderId);
+        if (photographer?.fcmToken) {
+            await sendServzyFCMNotification(
+                photographer.fcmToken,
+                'Booking Cancelled',
+                `${booking.client[0].name} has cancelled their booking`,
+                {
+                    bookingId: bookingId,
+                    type: 'booking_cancelled',
+                    clientName: booking.client[0].name
+                }
+            );
+        }
+
+        // Process refund if applicable
+        if (refundData.refundAmount > 0) {
+            await processRefund(booking, refundData);
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Booking cancelled successfully',
+            booking: updatedBooking,
+            refund: {
+                amount: refundData.refundAmount,
+                percentage: refundData.refundPercentage,
+                status: refundData.refundAmount > 0 ? 'pending' : 'none'
+            }
+        });
+
+    } catch (error) {
+        console.error('Error cancelling booking:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+});
+
+// Helper function to calculate refund
+function calculateRefund(booking) {
+    const bookingTime = new Date(booking.bookDateTime);
+    const currentTime = new Date();
+    const hoursDifference = (bookingTime.getTime() - currentTime.getTime()) / (1000 * 3600);
+    
+    let refundPercentage = 0;
+    
+    if (hoursDifference > 48) {
+        refundPercentage = 100; // Full refund if cancelled 48+ hours before
+    } else if (hoursDifference > 24) {
+        refundPercentage = 75; // 75% refund if cancelled 24-48 hours before
+    } else if (hoursDifference > 12) {
+        refundPercentage = 50; // 50% refund if cancelled 12-24 hours before
+    } else if (hoursDifference > 2) {
+        refundPercentage = 25; // 25% refund if cancelled 2-12 hours before
+    }
+    
+    const refundAmount = (booking.money * refundPercentage) / 100;
+    
+    return {
+        refundAmount: Math.round(refundAmount),
+        refundPercentage
+    };
+}
+
+// // Helper function to create notification
+// async function createNotification(notificationData) {
+//     try {
+//         const notification = new Notification(notificationData);
+//         await notification.save();
+//         console.log('Notification created successfully');
+//     } catch (error) {
+//         console.error('Error creating notification:', error);
+//     }
+// }
+
+// Helper function to process refund
+async function processRefund(booking, refundData) {
+    try {
+        console.log(`Processing refund of ₹${refundData.refundAmount} for booking ${booking._id}`);
+        
+        // Here you would integrate with your payment gateway
+        // For example: Razorpay, Stripe, etc.
+        
+        // Update booking with refund status
+        await Booking.findByIdAndUpdate(booking._id, {
+            refundStatus: 'processed',
+            refundProcessedAt: new Date(),
+            paymentStatus: refundData.refundPercentage === 100 ? 'refunded' : 'partially_refunded'
+        });
+        
+        // Create notification for client about refund
+        await createNotification({
+            recipient: booking.client[0].clientId,
+            recipientType: 'User',
+            senderType: 'System',
+            type: 'refund_processed',
+            title: 'Refund Processed',
+            message: `Your refund of ₹${refundData.refundAmount} has been processed and will be credited to your account within 5-7 business days`,
+            bookingId: booking._id,
+            data: {
+                refundAmount: refundData.refundAmount,
+                refundPercentage: refundData.refundPercentage
+            },
+            priority: 'medium'
+        });
+        
+    } catch (error) {
+        console.error('Error processing refund:', error);
+    }
+}
+
+// // Get notifications for user
+// bookRouter.get('/notifications/:userId', async (req, res) => {
+//     try {
+//         const { userId } = req.params;
+//         const { page = 1, limit = 20, unreadOnly = false } = req.query;
+        
+//         const query = { recipient: userId };
+//         if (unreadOnly === 'true') {
+//             query.read = false;
+//         }
+        
+//         const notifications = await Notification.find(query)
+//             .populate('bookingId', 'bookDateTime serviceType money')
+//             .sort({ createdAt: -1 })
+//             .limit(limit * 1)
+//             .skip((page - 1) * limit);
+            
+//         const totalCount = await Notification.countDocuments(query);
+//         const unreadCount = await Notification.countDocuments({ 
+//             recipient: userId, 
+//             read: false 
+//         });
+        
+//         res.status(200).json({
+//             success: true,
+//             notifications,
+//             pagination: {
+//                 currentPage: page,
+//                 totalPages: Math.ceil(totalCount / limit),
+//                 totalCount,
+//                 unreadCount
+//             }
+//         });
+        
+//     } catch (error) {
+//         console.error('Error fetching notifications:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error fetching notifications',
+//             error: error.message
+//         });
+//     }
+// });
+
+// // Mark notification as read
+// bookRouter.put('/notifications/:notificationId/read', async (req, res) => {
+//     try {
+//         const { notificationId } = req.params;
+        
+//         const notification = await Notification.findByIdAndUpdate(
+//             notificationId,
+//             { 
+//                 read: true, 
+//                 readAt: new Date() 
+//             },
+//             { new: true }
+//         );
+        
+//         if (!notification) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'Notification not found'
+//             });
+//         }
+        
+//         res.status(200).json({
+//             success: true,
+//             message: 'Notification marked as read',
+//             notification
+//         });
+        
+//     } catch (error) {
+//         console.error('Error marking notification as read:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error updating notification',
+//             error: error.message
+//         });
+//     }
+// });
 
 
 

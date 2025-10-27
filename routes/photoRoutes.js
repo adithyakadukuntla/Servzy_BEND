@@ -356,9 +356,11 @@ photoRouter.post('/review', async (req, res) => {
 });
 
 // Existing get all photographers route (unchanged)
-photoRouter.get('/allpshooters', async (req, res) => {
+photoRouter.get('/allpshooters/:pincode', async (req, res) => {
+
   try {
-    const data = await Photographer.find({ isActive: true }).select('-password');
+    const {pincode} = req.params;
+    const data = await Photographer.find({ isActive: true, pincode}).select('-password');
     
     if (data && data.length > 0) {
       res.status(200).json({
@@ -367,8 +369,8 @@ photoRouter.get('/allpshooters', async (req, res) => {
         count: data.length
       });
     } else {
-      res.status(404).json({
-        message: "not found data",
+      res.status(200).json({
+        message: "Please change your address and try again",
         payload: []
       });
     }
@@ -381,6 +383,33 @@ photoRouter.get('/allpshooters', async (req, res) => {
   }
 });
 
+// searrch the photographers with the search bar
+photoRouter.get('/search',async(req,res)=>{
+  try{
+     const searchQuery = req.query.searchQuery;
+    // console.log("cls",searchQuery)
+    
+    const searchRegex = new RegExp(searchQuery, 'i');
+
+    const photographers = await Photographer.find({
+      isActive: true,
+      $or: [
+        { name: searchRegex },
+        { businessName: searchRegex },
+        { city: searchRegex },
+        { state: searchRegex }
+      ]
+    });
+
+    return res.status(200).json({
+      message: 'search-photo data',
+      payload: photographers
+    });
+
+  }catch(err){
+    res.send({message:"error occurred"})
+  }
+})
 // Update photographer portfolio
 photoRouter.put('/portfolio/:id', async (req, res) => {
   
@@ -525,15 +554,15 @@ photoRouter.post('/portfolio/:id/add', async (req, res) => {
 
 
 photoRouter.post('/save-push-token', async (req, res) => {
-  const { pId, expoPushToken } = req.body;
-   console.log("rbexpotoken",req.body)
-  if (!pId || !expoPushToken) {
+  const { pId, fcmToken } = req.body;
+  //  console.log("rbexpotoken",req.body)
+  if (!pId || !fcmToken) {
     return res.send({ success: false, message: 'Missing userId or token' });
   }
 
   try {
     // Update user record with token (adjust based on your DB model)
-    await Photographer.findByIdAndUpdate(pId, { expoPushToken });
+    await Photographer.findByIdAndUpdate(pId, { fcmToken });
     res.send({ success: true, message: 'Push token saved' });
   } catch (err) {
     console.error('Error saving push token:', err);
